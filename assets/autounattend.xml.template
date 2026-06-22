@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Proxmox DC Lifecycle autounattend template — Windows Server Core, UEFI/GPT, virtio.
+  Replace placeholders before use:
+    __IMAGE_INDEX__  WIM image index from `wiminfo install.wim`. Server 2025 Eval:
+                     1=StandardCore, 2=Standard+Desktop, 3=DatacenterCore, 4=Datacenter+Desktop.
+                     (Selecting by index avoids the NAME-mismatch trap that silently installs Datacenter.
+                      Note: some eval media still default to Datacenter regardless — see references/gotchas.md.)
+    __HOSTNAME__     e.g. DC2
+    __IPCIDR__       e.g. 10.0.0.20/24
+    __GATEWAY__      e.g. 10.0.0.1
+    __DNS__          a healthy DC's IP (set to self after promotion)
+    __DNSDOMAIN__    e.g. example.local
+    __TIMEZONE__     e.g. UTC
+    __ADMINPW__      local Administrator password (this file is transient; delete the ISO after install)
+  DriverPaths assume the virtio-win ISO mounts as E:. Adjust if Setup assigns a different letter,
+  and the 2k25 folder to match your Server version.
+  The boot disk here is virtio0 (viostor). vioscsi included for a scsi-on-virtio-scsi disk.
+-->
+<unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <settings pass="windowsPE">
+    <component name="Microsoft-Windows-PnpCustomizationsWinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <DriverPaths>
+        <PathAndCredentials wcm:action="add" wcm:keyValue="1"><Path>E:\viostor\2k25\amd64</Path></PathAndCredentials>
+        <PathAndCredentials wcm:action="add" wcm:keyValue="2"><Path>E:\vioscsi\2k25\amd64</Path></PathAndCredentials>
+        <PathAndCredentials wcm:action="add" wcm:keyValue="3"><Path>E:\NetKVM\2k25\amd64</Path></PathAndCredentials>
+        <PathAndCredentials wcm:action="add" wcm:keyValue="4"><Path>E:\Balloon\2k25\amd64</Path></PathAndCredentials>
+        <PathAndCredentials wcm:action="add" wcm:keyValue="5"><Path>E:\vioserial\2k25\amd64</Path></PathAndCredentials>
+      </DriverPaths>
+    </component>
+    <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <DiskConfiguration>
+        <Disk wcm:action="add">
+          <DiskID>0</DiskID>
+          <WillWipeDisk>true</WillWipeDisk>
+          <CreatePartitions>
+            <CreatePartition wcm:action="add"><Order>1</Order><Type>EFI</Type><Size>260</Size></CreatePartition>
+            <CreatePartition wcm:action="add"><Order>2</Order><Type>MSR</Type><Size>16</Size></CreatePartition>
+            <CreatePartition wcm:action="add"><Order>3</Order><Type>Primary</Type><Extend>true</Extend></CreatePartition>
+          </CreatePartitions>
+          <ModifyPartitions>
+            <ModifyPartition wcm:action="add"><Order>1</Order><PartitionID>1</PartitionID><Label>System</Label><Format>FAT32</Format></ModifyPartition>
+            <ModifyPartition wcm:action="add"><Order>2</Order><PartitionID>2</PartitionID></ModifyPartition>
+            <ModifyPartition wcm:action="add"><Order>3</Order><PartitionID>3</PartitionID><Label>Windows</Label><Format>NTFS</Format><Letter>C</Letter></ModifyPartition>
+          </ModifyPartitions>
+        </Disk>
+      </DiskConfiguration>
+      <ImageInstall>
+        <OSImage>
+          <InstallTo><DiskID>0</DiskID><PartitionID>3</PartitionID></InstallTo>
+          <!-- Select by INDEX, not NAME: a NAME mismatch silently defaults to Datacenter.
+               Verify the index with `wiminfo install.wim`. -->
+          <InstallFrom><MetaData wcm:action="add"><Key>/IMAGE/INDEX</Key><Value>__IMAGE_INDEX__</Value></MetaData></InstallFrom>
+        </OSImage>
+      </ImageInstall>
+      <UserData>
+        <ProductKey><Key></Key></ProductKey>
+        <AcceptEula>true</AcceptEula>
+        <FullName>Administrator</FullName>
+        <Organization>YourOrg</Organization>
+      </UserData>
+    </component>
+  </settings>
+
+  <settings pass="specialize">
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <ComputerName>__HOSTNAME__</ComputerName>
+      <TimeZone>__TIMEZONE__</TimeZone>
+    </component>
+    <component name="Microsoft-Windows-TCPIP" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <Interfaces>
+        <Interface wcm:action="add">
+          <Identifier>Ethernet</Identifier>
+          <Ipv4Settings><DhcpEnabled>false</DhcpEnabled><RouterDiscoveryEnabled>false</RouterDiscoveryEnabled></Ipv4Settings>
+          <UnicastIpAddresses><IpAddress wcm:action="add" wcm:keyValue="1">__IPCIDR__</IpAddress></UnicastIpAddresses>
+          <Routes><Route wcm:action="add"><Identifier>1</Identifier><Prefix>0.0.0.0/0</Prefix><NextHopAddress>__GATEWAY__</NextHopAddress><Metric>10</Metric></Route></Routes>
+        </Interface>
+      </Interfaces>
+    </component>
+    <component name="Microsoft-Windows-DNS-Client" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <Interfaces>
+        <Interface wcm:action="add">
+          <Identifier>Ethernet</Identifier>
+          <DNSServerSearchOrder><IpAddress wcm:action="add" wcm:keyValue="1">__DNS__</IpAddress></DNSServerSearchOrder>
+          <DNSDomain>__DNSDOMAIN__</DNSDomain>
+          <EnableAdapterDomainNameRegistration>true</EnableAdapterDomainNameRegistration>
+        </Interface>
+      </Interfaces>
+    </component>
+  </settings>
+
+  <settings pass="oobeSystem">
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <UserAccounts><AdministratorPassword><Value>__ADMINPW__</Value><PlainText>true</PlainText></AdministratorPassword></UserAccounts>
+      <OOBE>
+        <HideEULAPage>true</HideEULAPage>
+        <HideLocalAccountScreen>true</HideLocalAccountScreen>
+        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+        <NetworkLocation>Work</NetworkLocation>
+        <ProtectYourPC>3</ProtectYourPC>
+        <SkipMachineOOBE>true</SkipMachineOOBE>
+        <SkipUserOOBE>true</SkipUserOOBE>
+      </OOBE>
+      <FirstLogonCommands>
+        <SynchronousCommand wcm:action="add"><Order>1</Order><Description>Enable QEMU guest agent</Description><CommandLine>cmd /c sc config QEMU-GA start= auto &amp; net start QEMU-GA</CommandLine></SynchronousCommand>
+        <SynchronousCommand wcm:action="add"><Order>2</Order><Description>Enable WinRM</Description><CommandLine>powershell -NoProfile -Command "Enable-PSRemoting -Force"</CommandLine></SynchronousCommand>
+        <!-- Secondary completion hint. The authoritative signal is the ImageState reg key = IMAGE_STATE_COMPLETE; this marker is best-effort (cmd redirects in FirstLogonCommands can misfire). -->
+        <SynchronousCommand wcm:action="add"><Order>3</Order><Description>Completion marker</Description><CommandLine>powershell -NoProfile -Command "Set-Content -Path C:\oobe_done.txt -Value OOBE_DONE"</CommandLine></SynchronousCommand>
+      </FirstLogonCommands>
+    </component>
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <InputLocale>en-US</InputLocale><SystemLocale>en-US</SystemLocale><UILanguage>en-US</UILanguage><UserLocale>en-US</UserLocale>
+    </component>
+  </settings>
+</unattend>
