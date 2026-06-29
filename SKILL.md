@@ -1,6 +1,17 @@
 ---
 name: proxmox-dc-lifecycle
-description: Rebuild a Windows Active Directory domain controller hosted as a Proxmox VM — demote it, clean its metadata from a surviving DC, reinstall the OS hands-off via autounattend, then rejoin and re-promote it. Use this whenever the user wants to rebuild, replace, redeploy, demote, or re-promote an AD domain controller VM on Proxmox (e.g. "rebuild a DC", "the DC won't demote", "promote the new DC", "clean up the old DC's metadata"), AND for the symptoms that lead into a rebuild even when the user doesn't say "rebuild": a DC where NTDS won't start, ntds.dit is missing, a promotion fails with a trust-relationship / "no computer account" error, a demotion hangs, dcdiag/replication failures on a specific DC, or a Proxmox-hosted DC that's broken and needs to come back. Also use when driving Windows AD operations on Proxmox guests via the QEMU guest agent (qm guest exec). The overriding rule is DO NOT CORRUPT ACTIVE DIRECTORY: verify replication and FSMO before and after every lifecycle step, change one DC at a time, and never destroy a VM while AD still sees it as a domain controller.
+description: >-
+  Rebuild, replace, demote, reinstall, rejoin, or re-promote a Windows Active
+  Directory domain controller VM on Proxmox: demote it, clean metadata from a
+  healthy DC, reinstall via autounattend, then promote it again. Use for
+  Proxmox-hosted DC rebuild requests and symptoms that point to rebuild: NTDS
+  will not start, ntds.dit is missing, promotion fails with trust-relationship or
+  "no computer account" errors, demotion hangs, dcdiag/replication fails on one
+  DC, or a broken DC VM needs to come back. Also use for Windows AD operations
+  through QEMU guest agent (qm guest exec). Rule: do not corrupt Active
+  Directory; verify replication and FSMO before and after every lifecycle step,
+  change one DC at a time, and never destroy or recreate a VM while AD still has
+  NTDS Settings for that DC.
 ---
 
 # Proxmox DC Lifecycle
