@@ -45,7 +45,7 @@ Each phase has an explicit **gate** — do not proceed until it's green. See `SK
 | File | Purpose |
 |------|---------|
 | `SKILL.md` | Full reference — environment config, the lifecycle, gates, prime directive |
-| `references/qga-execution.md` | The `qm guest exec` over-stdin execution backbone + secret handling |
+| `references/qga-execution.md` | The execution backbone — `qm guest exec` (and off-host REST API), secrets over stdin, `cmd` vs PowerShell, verifying installers by exit code |
 | `references/verification.md` | Read-only health checks (FSMO, replication, dcdiag, SYSVOL/DFSR) |
 | `references/demotion.md` | Graceful demotion + the LocalAdministratorPassword / RemoveDnsDelegation gotchas; forced-removal fallback |
 | `references/metadata-cleanup.md` | Finding & removing DC residue; what each leftover object means |
